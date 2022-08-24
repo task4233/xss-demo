@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  app:
+    container_name: app
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    ports:
+      - 6060
+    restart: always
+    networks:
+      - app-network
+
+  db:
+    container_name: db
+    image: mysql:8
+    volumes:
+      - ./mysql/data:/var/lib/mysql
+      - ./mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./mysql/sql:/docker-entrypoint-initdb.d
+      - ./mysql/init_database.sh:/tmp/init_database.sh
+    environment:
+      - MYSQL_ROOT_PASSWORD=testpass
+      - MYSQL_DATABASE=test
+      - MYSQL_USER=test
+      - MYSQL_PASSWORD=test
+    networks:
+      - app-network
+    ports:
+      - 3306:3306
+networks:
+  app-network:
+    driver: bridge

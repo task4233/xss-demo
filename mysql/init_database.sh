@@ -1,0 +1,1 @@
+mysql -u test -ptest test < "/docker-entrypoint-initdb.d/00-create-tables.sql"
