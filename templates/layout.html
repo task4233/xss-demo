@@ -21,7 +21,7 @@
         <div class="navbar-nav ml-auto">
             <a class="nav-item nav-link" href="/users/login">Login</a>
             <a class="nav-item nav-link" href="/users/signup">Signup</a>
-            <a class="nav-item nav-link" href="/users/login" onclick="deleteCookie()">Logout</a>
+            <a class="nav-item nav-link" href="/users/logout">Logout</a>
         </div>
         </div>
     </nav>
@@ -32,13 +32,6 @@
         <div id="alert" style="display:none" class="alert alert-primary" role="alert"></div>
 
         {{ template "body" . }}
-
-        <script>
-            function logout() {
-                document.cookie = "SESSION_ID=; max-age=0";
-            }
-        </script>
-
 </body>
 
 </html>

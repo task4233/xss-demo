@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"time"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -26,6 +27,7 @@ func (u UserController) Routes() chi.Router {
 	r.Post("/signup", u.Signup)
 	r.Get("/login", u.LoginForm)
 	r.Post("/login", u.Login)
+	r.Get("/logout", u.Logout)
 
 	return r
 }
@@ -114,9 +116,9 @@ func (u UserController) Login(w http.ResponseWriter, r *http.Request) {
 	mu.Unlock()
 
 	http.SetCookie(w, &http.Cookie{
-		Name:  sessionKey,
-		Value: sessionID,
-		Path:  "/",
+		Name:    sessionKey,
+		Value:   sessionID,
+		Path:    "/",
 		Expires: time.Now().Add(24 * time.Hour),
 	})
 
@@ -183,7 +185,7 @@ func (u UserController) Signup(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:  sessionKey,
 		Value: sessionID,
-		Path: "/",
+		Path:  "/",
 	})
 
 	setToken(r.Context(), fmt.Sprintf("%d", user.ID))
@@ -203,4 +205,14 @@ func (u UserController) SignupForm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprint(w, renderedHTML)
+}
+
+func (u UserController) Logout(w http.ResponseWriter, r *http.Request) {
+	c, err := r.Cookie(sessionKey)
+	if err != nil {
+		return
+	}
+
+	c.MaxAge = -1
+	http.SetCookie(w, c)
 }
