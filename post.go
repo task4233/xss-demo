@@ -60,6 +60,7 @@ func (p PostController) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
+
 	if err = post.Validate(); err != nil {
 		logger.Printf("failed Validate: %s", err.Error())
 		http.Error(w, "bad request", http.StatusBadRequest)
