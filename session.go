@@ -59,7 +59,7 @@ func AuthUser(next http.Handler) http.Handler {
 		// sessionIDが取得できなかった場合はそのまま処理を続ける
 		if err != nil || sessionID == nil {
 			logger.Printf("failed to get sessionID, cookies: %v\n", cookies)
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			http.Redirect(w, r, "/users/login", http.StatusSeeOther)
 			return
 		}
 
@@ -68,7 +68,7 @@ func AuthUser(next http.Handler) http.Handler {
 		user, ok := sessions[sessionID.Value]
 		if !ok {
 			logger.Printf("failed to find session: %v\n", sessionID.Value)
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			http.Redirect(w, r, "/users/login", http.StatusSeeOther)
 			return
 		}
 
@@ -77,7 +77,7 @@ func AuthUser(next http.Handler) http.Handler {
 			logger.Printf("invalid user: %v\n", user)
 			sessionID.MaxAge = -1
 			http.SetCookie(w, sessionID)
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			http.Redirect(w, r, "/users/login", http.StatusSeeOther)
 			return
 		}
 
