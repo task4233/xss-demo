@@ -7,10 +7,17 @@ services:
       context: ./
       dockerfile: Dockerfile
     ports:
-      - 6060
+      - 6060:6060
     restart: always
     networks:
       - app-network
+    environment:
+      - PORT=$PORT
+      - DB_DATABASE=$DB_DATABASE
+      - DB_USER=$DB_USER
+      - DB_PASSWORD=$DB_PASSWORD
+      - DB_HOST=$DB_HOST
+      - DB_PORT=$DB_PORT
 
   db:
     container_name: db
@@ -21,10 +28,10 @@ services:
       - ./mysql/sql:/docker-entrypoint-initdb.d
       - ./mysql/init_database.sh:/tmp/init_database.sh
     environment:
-      - MYSQL_ROOT_PASSWORD=testpass
-      - MYSQL_DATABASE=test
-      - MYSQL_USER=test
-      - MYSQL_PASSWORD=test
+      - MYSQL_ROOT_PASSWORD=$DB_ROOT_PASSWORD
+      - MYSQL_DATABASE=$DB_DATABASE
+      - MYSQL_USER=$DB_USER
+      - MYSQL_PASSWORD=$DB_PASSWORD
     networks:
       - app-network
     ports:

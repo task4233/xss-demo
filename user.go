@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -31,11 +30,8 @@ func (u UserController) Routes() chi.Router {
 }
 
 var (
-	//go:embed templates/login.html.tmpl
-	loginForm string
-
-	//go:embed templates/signup.html.tmpl
-	signupForm string
+	signupTemplates = []string{"templates/layout.html", "templates/signup.html"}
+	loginTemplates  = []string{"templates/layout.html", "templates/login.html"}
 )
 
 type UserRequest struct {
@@ -60,13 +56,12 @@ type User struct {
 }
 
 func (u UserController) Login(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(os.Stderr, "Login called")
+	logger.Printf("POST /users/login from %v", r.Header.Get("X-Forwarded-For"))
 
 	session, err := r.Cookie(sessionKey)
 	if err == nil && session != nil {
 		if sess, ok := sessions[session.Value]; ok {
 			setToken(r.Context(), fmt.Sprintf("%d", sess.ID))
-			// http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}
 	}
@@ -76,7 +71,7 @@ func (u UserController) Login(w http.ResponseWriter, r *http.Request) {
 	userRequest := UserRequest{}
 	err = json.NewDecoder(r.Body).Decode(&userRequest)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed Decode JSON: %s\n", err.Error())
+		logger.Printf("failed Decode JSON: %s\n", err.Error())
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
@@ -84,7 +79,7 @@ func (u UserController) Login(w http.ResponseWriter, r *http.Request) {
 	// validation
 	err = userRequest.Validate()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed Validate: %s\n", err.Error())
+		logger.Printf("failed Validate: %s\n", err.Error())
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
@@ -110,7 +105,7 @@ func (u UserController) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(os.Stderr, "logged in: %v\n", user)
+	logger.Printf("logged in: %v\n", user)
 
 	sessionID := uuid.NewString()
 	mu.Lock()
@@ -123,22 +118,21 @@ func (u UserController) Login(w http.ResponseWriter, r *http.Request) {
 		Path:  "/",
 	})
 
-	fmt.Fprintf(os.Stderr, "sessions: %v\n", sessions)
+	logger.Printf("sessions: %v\n", sessions)
 
 	setToken(r.Context(), fmt.Sprintf("%d", user.ID))
-	// /にリダイレクトする
-	// http.Redirect(w, r, "/", http.StatusSeeOther)
 	// エラーが発生した場合は/loginにエラーメッセージのquery parameter付きでリダイレクトする
 }
 
 func (u UserController) LoginForm(w http.ResponseWriter, r *http.Request) {
-	// TODO:
+	logger.Printf("GET /users/login from %v", r.Header.Get("X-Forwarded-For"))
+
 	// query parameterからエラー情報を受け取る
 	// template/login.html.tmplを返却する
 	errString := r.URL.Query().Get("error")
-	renderedHTML, err := RenderTemplate(loginForm, errString)
+	renderedHTML, err := RenderTemplate(loginTemplates, errString)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed RenderTemplate: %s\n", err.Error())
+		logger.Printf("failed RenderTemplate: %s\n", err.Error())
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -147,12 +141,13 @@ func (u UserController) LoginForm(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u UserController) Signup(w http.ResponseWriter, r *http.Request) {
-	// TODO:
+	logger.Printf("POST /users/signup from %v", r.Header.Get("X-Forwarded-For"))
+
 	// request bodyからnameとpasswordを取得する
 	userRequest := UserRequest{}
 	err := json.NewDecoder(r.Body).Decode(&userRequest)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed Decode JSON: %s\n", err.Error())
+		logger.Printf("failed Decode JSON: %s\n", err.Error())
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
@@ -160,7 +155,7 @@ func (u UserController) Signup(w http.ResponseWriter, r *http.Request) {
 	// validation
 	err = userRequest.Validate()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed Validate: %s\n", err.Error())
+		logger.Printf("failed Validate: %s\n", err.Error())
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
@@ -172,11 +167,11 @@ func (u UserController) Signup(w http.ResponseWriter, r *http.Request) {
 
 	res, err := u.db.NamedExecContext(r.Context(), `INSERT INTO users (name, password_hash) VALUES (:name, :password_hash)`, user)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed NamedExecContext: %s\n", err.Error())
+		logger.Printf("failed NamedExecContext: %s\n", err.Error())
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	fmt.Fprintf(os.Stderr, "result: %v\n", res)
+	logger.Printf("result: %v\n", res)
 
 	sessionID := uuid.NewString()
 	mu.Lock()
@@ -189,18 +184,17 @@ func (u UserController) Signup(w http.ResponseWriter, r *http.Request) {
 	})
 
 	setToken(r.Context(), fmt.Sprintf("%d", user.ID))
-	// /にリダイレクト
 	// エラーが発生した場合は/signupにエラーメッセージのquery parameter付きでリダイレクト
 }
 
 func (u UserController) SignupForm(w http.ResponseWriter, r *http.Request) {
-	// TODO:
+	logger.Printf("GET /users/login from %v", r.Header.Get("X-Forwarded-For"))
+
 	// query parameterからエラー情報を受け取る
-	// template/signup.html.tmplを返却する
 	errString := r.URL.Query().Get("error")
-	renderedHTML, err := RenderTemplate(signupForm, errString)
+	renderedHTML, err := RenderTemplate(signupTemplates, errString)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed RenderTemplate: %s\n", err.Error())
+		logger.Printf("failed RenderTemplate: %s\n", err.Error())
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}

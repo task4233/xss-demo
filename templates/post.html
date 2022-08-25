@@ -1,0 +1,61 @@
+{{ define "body" }}
+<!-- 投稿用のフォーム -->
+<form method="POST" id="submit-form">
+  <div class="form-group">
+    <label for="title">Title</label>
+    <input type="text" name="title" class="form-control" id="title" aria-describedby="titleHelp"
+      placeholder="Enter title">
+    <small id="titleHelp" class="form-text text-muted">title must not be empty.</small>
+  </div>
+  <div class="form-group">
+    <label for="body">Body</label>
+    <textarea class="form-control" name="body" id="body" placeholder="Write something"></textarea>
+  </div>
+  <button type="submit" class="btn btn-success mt-3">Submit</button>
+</form>
+
+<!-- 一覧 -->
+<h2>投稿</h2>
+{{ range $post := . }}
+<div class="card">
+  <div class="card-header">
+    {{ $post.Title }}
+  </div>
+  <div class="card-body">
+    {{ $post.Body }}
+  </div>
+</div>
+{{ end }}
+</div>
+
+<script type="text/javascript">
+  document.getElementById("submit-form").onsubmit = function (e) {
+    e.preventDefault();
+
+    const title = document.getElementById("title").value;
+    const body = document.getElementById("body").value;
+    fetch('/', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        title: title,
+        body: body,
+      })
+    })
+      .then(res => {
+        if (res.status === 200) return res;
+        console.error(res);
+      })
+      .then(res => {
+        window.location.href = "/";
+      });
+  }
+
+  function logout() {
+    document.cookie = "SESSION_ID=; max-age=0";
+  }
+</script>
+{{ end }}

@@ -5,8 +5,8 @@ import (
 	"text/template"
 )
 
-func RenderTemplate(tmpl string, data interface{}) (string, error) {
-	tpl, err := template.New("detail").Parse(tmpl)
+func RenderTemplate(fileNames []string, data interface{}) (string, error) {
+	tpl, err := template.ParseFiles(fileNames...)
 	if err != nil {
 		return "", err
 	}

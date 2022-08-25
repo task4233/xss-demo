@@ -8,7 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-const addr = ":6060"
+var addr = fmt.Sprintf(":%s", os.Getenv("PORT"))
 
 type Server struct{}
 
@@ -23,11 +23,13 @@ func (s *Server) Run() error {
 	}
 	defer func() {
 		if err := db.Close(); err != nil {
-			fmt.Fprintf(os.Stderr, "failed to close DB: %s\n", err.Error())
+			logger.Printf("failed to close DB: %s\n", err.Error())
 		}
 	}()
 
 	r := chi.NewRouter()
+	r.Use(BasicAuth)
+
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
 	})
@@ -36,7 +38,8 @@ func (s *Server) Run() error {
 	r.Mount("/", PostController{db}.Routes())
 	r.Mount("/users", UserController{db}.Routes())
 
-	fmt.Fprintf(os.Stderr, "Listen on %s\n", addr)
+	logger.Printf("Listen on %s\n", addr)
 	http.ListenAndServe(addr, r)
+
 	return nil
 }

@@ -27,7 +27,7 @@ var dsn = fmt.Sprintf(
 ) + "?parseTime=true&collation=utf8mb4_bin"
 
 func NewDB() (*sqlx.DB, error) {
-	fmt.Fprintf(os.Stderr, "connect to %s\n", dsn)
+	logger.Printf("connect to %s\n", dsn)
 	db, err := sqlx.Connect("mysql", dsn)
 	if err != nil {
 		return nil, err

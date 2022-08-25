@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -17,10 +16,7 @@ type PostController struct {
 	db *sqlx.DB
 }
 
-var (
-	//go:embed templates/post.html.tmpl
-	postTemplate string
-)
+var listTemplates = []string{"templates/layout.html", "templates/post.html"}
 
 type Post struct {
 	ID     int    `db:"id"`
@@ -40,6 +36,8 @@ func (p *Post) Validate() error {
 }
 
 func (p PostController) Create(w http.ResponseWriter, r *http.Request) {
+	logger.Printf("POST / from %s", r.Header.Get("X-Forwarded-For"))
+
 	// request bodyからtitle, bodyを抜き出す
 	post := Post{}
 	err := json.NewDecoder(r.Body).Decode(&post)
@@ -52,18 +50,18 @@ func (p PostController) Create(w http.ResponseWriter, r *http.Request) {
 	// validation
 	userIDStr, err := getToken(r.Context())
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed getToken: %s\n", err.Error())
+		logger.Printf("failed getToken: %s\n", err.Error())
 		http.Redirect(w, r, "/users/login", http.StatusSeeOther)
 		return
 	}
 	post.UserID, err = strconv.Atoi(userIDStr)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "invalid userID: %v\n", r.Context().Value(contextKeyAuthToken))
+		logger.Printf("invalid userID: %v\n", r.Context().Value(contextKeyAuthToken))
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
 	if err = post.Validate(); err != nil {
-		fmt.Fprintf(os.Stderr, "failed Validate: %s", err.Error())
+		logger.Printf("failed Validate: %s", err.Error())
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
@@ -71,20 +69,18 @@ func (p PostController) Create(w http.ResponseWriter, r *http.Request) {
 	// DBにinsert
 	_, err = p.db.NamedExecContext(r.Context(), `INSERT INTO posts (user_id, title, body) VALUES (:user_id, :title, :body)`, post)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed insertion: %s", err.Error())
+		logger.Printf("failed insertion: %s", err.Error())
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-	// /にGETでリダイレクト
-	// これはフロントに任せる
 }
 
 func (p PostController) List(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(os.Stderr, "List called")
+	logger.Printf("GET / from %s", r.Header.Get("X-Forwarded-For"))
 
 	userIDStr, err := getToken(r.Context())
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed getToken: %s\n", err.Error())
+		logger.Printf("failed getToken: %s\n", err.Error())
 		http.Redirect(w, r, "/users/login", http.StatusSeeOther)
 		return
 	}
@@ -93,15 +89,15 @@ func (p PostController) List(w http.ResponseWriter, r *http.Request) {
 	posts := []Post{}
 	err = p.db.Select(&posts, `SELECT * FROM posts WHERE user_id = ? ORDER BY id DESC`, userIDStr)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed Select: %s\n", err.Error())
+		logger.Printf("failed Select: %s\n", err.Error())
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	// /のHTMLを返す
-	renderedHTML, err := RenderTemplate(postTemplate, posts)
+	renderedHTML, err := RenderTemplate(listTemplates, posts)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed RenderTemplate: %s\n", err.Error())
+		logger.Printf("failed RenderTemplate: %s\n", err.Error())
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"sync"
 )
 
@@ -32,27 +31,43 @@ func getToken(ctx context.Context) (string, error) {
 	return "", fmt.Errorf("failed conversion for session token: %v", ctx.Value(contextKeyAuthToken))
 }
 
+const (
+	masterClientID       = "ctf4b2022"
+	masterClientPassword = "deadbeef"
+)
+
+func BasicAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		clientID, clientSecret, ok := r.BasicAuth()
+		if !ok || !(clientID == masterClientID && clientSecret == masterClientPassword) {
+			logger.Printf("failed basicAuth: ok=%v, (%v, %v)\n", ok, clientID, clientSecret)
+			w.Header().Add("WWW-Authenticate", `Basic realm="SECRET AREA"`)
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func AuthUser(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(os.Stderr, "AuthUser called")
+		logger.Printf("AuthUser from %v", r.Header.Get("X-Forwarded-For"))
 
 		// CookieからSession IDを取得する
 		cookies := r.Cookies()
 		sessionID, err := r.Cookie(sessionKey)
 		// sessionIDが取得できなかった場合はそのまま処理を続ける
 		if err != nil || sessionID == nil {
-			fmt.Fprintf(os.Stderr, "failed to get sessionID, cookies: %v\n", cookies)
+			logger.Printf("failed to get sessionID, cookies: %v\n", cookies)
 			http.Redirect(w, r, "/users/login", http.StatusSeeOther)
 			return
 		}
-		fmt.Fprintf(os.Stderr, "sessions: %v\n", sessions)
-		fmt.Fprintf(os.Stderr, "cookies: %v\n", cookies)
 
 		mu.Lock()
 		defer mu.Unlock()
 		user, ok := sessions[sessionID.Value]
 		if !ok {
-			fmt.Fprintf(os.Stderr, "failed to find session: %v\n", sessionID.Value)
+			logger.Printf("failed to find session: %v\n", sessionID.Value)
 			http.Redirect(w, r, "/users/login", http.StatusSeeOther)
 			return
 		}
