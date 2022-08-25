@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"time"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -116,6 +117,7 @@ func (u UserController) Login(w http.ResponseWriter, r *http.Request) {
 		Name:  sessionKey,
 		Value: sessionID,
 		Path:  "/",
+		Expires: time.Now().Add(24 * time.Hour),
 	})
 
 	logger.Printf("sessions: %v\n", sessions)

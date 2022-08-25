@@ -1,7 +1,8 @@
 FROM golang:1.17.1 AS builder
 
-RUN groupadd -r test && useradd --no-log-init -r -g test test
-USER test
+ENV USER coke
+RUN groupadd -r $USER && useradd --no-log-init -r -g $USER $USER
+USER $USER
 
 WORKDIR /home/test
 

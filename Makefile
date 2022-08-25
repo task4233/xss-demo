@@ -7,7 +7,7 @@ run:
 
 .PHONY:docker/up
 docker/up:
-	docker compose -f docker-compose.yml up --build
+	docker compose -f docker-compose.yml up --build -d
 
 .PHONY:docker/down
 docker/down:
@@ -16,3 +16,7 @@ docker/down:
 .PHONY:migrae
 migrate:
 	docker exec -it db bash /tmp/init_database.sh
+
+.PHONY:log
+log:
+	docker compose logs -f
