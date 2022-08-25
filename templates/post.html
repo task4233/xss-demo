@@ -46,12 +46,6 @@
         body: body,
       })
     })
-      .then(res => {
-        if (res.status === 200) {
-          location.href = "/";
-        }
-        return res;
-      })
       .then(res => res.text())
       .then((text) => {
         alertElem.style.display = "block";
