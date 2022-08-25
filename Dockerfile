@@ -1,16 +1,17 @@
 FROM golang:1.17.1 AS builder
 
-RUN groupadd -r test && useradd --no-log-init -r -g test test
-USER test
+ENV USER coke
+RUN groupadd -r $USER && useradd --no-log-init -r -g $USER
+USER $USER
 
-WORKDIR /home/test
+WORKDIR /home/$USER
 
-COPY go.mod /home/test/go.mod
+COPY go.mod /home/$USER/go.mod
 RUN go mod download
 
-COPY . /home/test
+COPY . /home/$USER
 # RUN go build -o /src/main /src/
-CMD ["go", "run", "/home/test/cmd/xss-demo/main.go"]
+CMD ["go", "run", "/home/${USER}/cmd/xss-demo/main.go"]
 
 # FROM ubuntu:18.04
 
