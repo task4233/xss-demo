@@ -65,6 +65,7 @@ func (p PostController) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
+	logger.Printf("new post: %v\n", post)
 
 	// DBにinsert
 	_, err = p.db.NamedExecContext(r.Context(), `INSERT INTO posts (user_id, title, body) VALUES (:user_id, :title, :body)`, post)

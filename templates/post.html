@@ -46,12 +46,12 @@
         body: body,
       })
     })
-      .then(res => res.text())
-      .then((text) => {
-        alertElem.style.display = "block";
-        alertElem.innerText = text;
-      });
-  }
+		  .then(res => {
+			  if (res.status === 200) {
+			  location.reload();
+			  }
+		  });
+ }
 
   function logout() {
     document.cookie = "SESSION_ID=; max-age=0";
