@@ -11,7 +11,7 @@ RUN go mod download
 
 COPY . /home/$USER
 # RUN go build -o /src/main /src/
-CMD ["go", "run", "/home/${USER}/cmd/xss-demo/main.go"]
+CMD ["go", "run", "./cmd/xss-demo/main.go"]
 
 # FROM ubuntu:18.04
 

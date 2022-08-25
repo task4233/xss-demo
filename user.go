@@ -183,6 +183,7 @@ func (u UserController) Signup(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:  sessionKey,
 		Value: sessionID,
+		Path: "/",
 	})
 
 	setToken(r.Context(), fmt.Sprintf("%d", user.ID))
