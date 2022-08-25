@@ -34,6 +34,7 @@
 
     const title = document.getElementById("title").value;
     const body = document.getElementById("body").value;
+    const alertElem = document.getElementById("alert");
     fetch('/', {
       method: 'POST',
       headers: {
@@ -46,11 +47,15 @@
       })
     })
       .then(res => {
-        if (res.status === 200) return res;
-        console.error(res);
+        if (res.status === 200) {
+          location.href = "/";
+        }
+        return res;
       })
-      .then(res => {
-        window.location.href = "/";
+      .then(res => res.text())
+      .then((text) => {
+        alertElem.style.display = "block";
+        alertElem.innerText = text;
       });
   }
 
