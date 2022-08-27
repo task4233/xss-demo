@@ -19,6 +19,14 @@ services:
       - DB_HOST=$DB_HOST
       - DB_PORT=$DB_PORT
 
+  redis:
+    container_name: redis
+    image: redis
+    volumes:
+      - ./redis/data:/data
+    networks:
+     - app-network
+
   db:
     container_name: db
     image: mysql:8
@@ -34,8 +42,6 @@ services:
       - MYSQL_PASSWORD=$DB_PASSWORD
     networks:
       - app-network
-    ports:
-      - 3306:3306
 networks:
   app-network:
     driver: bridge

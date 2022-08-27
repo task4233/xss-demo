@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
@@ -51,7 +52,7 @@ func (u *UserRequest) Validate() error {
 }
 
 type User struct {
-	ID           int    `db:"id"`
+	ID           int    `db:"id" redis:"id"`
 	Name         string `db:"name"`
 	PasswordHash string `db:"password_hash"`
 }
@@ -61,8 +62,8 @@ func (u UserController) Login(w http.ResponseWriter, r *http.Request) {
 
 	session, err := r.Cookie(sessionKey)
 	if err == nil && session != nil {
-		if sess, ok := sessions[session.Value]; ok {
-			setToken(r.Context(), fmt.Sprintf("%d", sess.ID))
+		if userID, err := getUserIDBySessionID(session.Value); err == nil {
+			setToken(r.Context(), fmt.Sprintf("%d", userID))
 			return
 		}
 	}
@@ -105,12 +106,13 @@ func (u UserController) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logger.Printf("logged in: %v\n", user)
-
 	sessionID := uuid.NewString()
-	mu.Lock()
-	sessions[sessionID] = user
-	mu.Unlock()
+	err = storeSession(sessionID, user.ID)
+	if err != nil {
+		logger.Printf("failed storeSession: %s", err.Error())
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
 
 	http.SetCookie(w, &http.Cookie{
 		Name:  sessionKey,
@@ -118,9 +120,9 @@ func (u UserController) Login(w http.ResponseWriter, r *http.Request) {
 		Path:  "/",
 	})
 
-	logger.Printf("sessions: %v\n", sessions)
-
 	setToken(r.Context(), fmt.Sprintf("%d", user.ID))
+
+	logger.Printf("logged in: %v, sessionID: %v\n", user, sessionID)
 	// エラーが発生した場合は/loginにエラーメッセージのquery parameter付きでリダイレクトする
 }
 
@@ -167,6 +169,12 @@ func (u UserController) Signup(w http.ResponseWriter, r *http.Request) {
 
 	res, err := u.db.NamedExecContext(r.Context(), `INSERT INTO users (name, password_hash) VALUES (:name, :password_hash)`, user)
 	if err != nil {
+		// duplicated usernameの時
+		if mysqlErr, ok := err.(*mysql.MySQLError); ok && mysqlErr.Number == 1062 {
+			http.Error(w, fmt.Sprintf("Username %s has already been used. Use an other name.", userRequest.Name), http.StatusBadRequest)
+			return
+		}
+
 		logger.Printf("failed NamedExecContext: %s\n", err.Error())
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
@@ -180,9 +188,12 @@ func (u UserController) Signup(w http.ResponseWriter, r *http.Request) {
 
 	user.ID = int(userID)
 	sessionID := uuid.NewString()
-	mu.Lock()
-	sessions[sessionID] = user
-	mu.Unlock()
+	err = storeSession(sessionID, user.ID)
+	if err != nil {
+		logger.Printf("failed storeSession: %s", err.Error())
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
 
 	http.SetCookie(w, &http.Cookie{
 		Name:  sessionKey,
