@@ -52,6 +52,7 @@ func BasicAuth(next http.Handler) http.Handler {
 func AuthUser(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Printf("AuthUser from %v", r.Header.Get("X-Forwarded-For"))
+		logger.Printf("Sessions: %v\n", sessions)
 
 		// CookieからSession IDを取得する
 		cookies := r.Cookies()
@@ -72,11 +73,12 @@ func AuthUser(next http.Handler) http.Handler {
 			return
 		}
 
+		logger.Printf("User: %v\n", user)
+
 		// 無効なUserIDなのでDisableにする
 		if user.ID <= 0 {
 			logger.Printf("invalid user: %v\n", user)
-			sessionID.MaxAge = -1
-			http.SetCookie(w, sessionID)
+			DisableCookie(&w, sessionID)
 			http.Redirect(w, r, "/users/login", http.StatusSeeOther)
 			return
 		}
@@ -84,4 +86,15 @@ func AuthUser(next http.Handler) http.Handler {
 		ctx := setToken(r.Context(), fmt.Sprintf("%d", user.ID))
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func DisableCookie(w *http.ResponseWriter, c *http.Cookie) {
+	c.Value = ""
+	c.MaxAge = -1
+	c.Path = "/"
+	c.Domain = ""
+	c.Secure = false
+	c.HttpOnly = false
+
+	http.SetCookie(*w, c)
 }

@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"time"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -69,7 +67,6 @@ func (u UserController) Login(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// TODO:
 	// request bodyからnameとpasswordを取得する
 	userRequest := UserRequest{}
 	err = json.NewDecoder(r.Body).Decode(&userRequest)
@@ -116,10 +113,9 @@ func (u UserController) Login(w http.ResponseWriter, r *http.Request) {
 	mu.Unlock()
 
 	http.SetCookie(w, &http.Cookie{
-		Name:    sessionKey,
-		Value:   sessionID,
-		Path:    "/",
-		Expires: time.Now().Add(24 * time.Hour),
+		Name:  sessionKey,
+		Value: sessionID,
+		Path:  "/",
 	})
 
 	logger.Printf("sessions: %v\n", sessions)
@@ -172,11 +168,17 @@ func (u UserController) Signup(w http.ResponseWriter, r *http.Request) {
 	res, err := u.db.NamedExecContext(r.Context(), `INSERT INTO users (name, password_hash) VALUES (:name, :password_hash)`, user)
 	if err != nil {
 		logger.Printf("failed NamedExecContext: %s\n", err.Error())
-		http.Error(w, "bad request", http.StatusBadRequest)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-	logger.Printf("result: %v\n", res)
+	userID, err := res.LastInsertId()
+	if err != nil {
+		logger.Printf("failed LastInsertId: %s\n", err.Error())
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
 
+	user.ID = int(userID)
 	sessionID := uuid.NewString()
 	mu.Lock()
 	sessions[sessionID] = user
@@ -210,9 +212,10 @@ func (u UserController) SignupForm(w http.ResponseWriter, r *http.Request) {
 func (u UserController) Logout(w http.ResponseWriter, r *http.Request) {
 	c, err := r.Cookie(sessionKey)
 	if err != nil {
+		logger.Printf("failed to get cookie: %s\n", err.Error())
 		return
 	}
 
-	c.MaxAge = -1
-	http.SetCookie(w, c)
+	DisableCookie(&w, c)
+	http.Redirect(w, r, "/users/login", http.StatusSeeOther)
 }
