@@ -24,17 +24,21 @@
   <div class="card-body">
     {{ $post.Body }}
   </div>
+  <button type="submit" data-set="{{ $post.ID }}" class="delete-form btn btn-danger mt-3">Delete</button>
 </div>
 {{ end }}
 </div>
 
 <script type="text/javascript">
+  const deleteForm = document.querySelector(".delete-form");
+  const alertElem = document.getElementById("alert");
+
   document.getElementById("submit-form").onsubmit = function (e) {
     e.preventDefault();
 
     const title = document.getElementById("title").value;
     const body = document.getElementById("body").value;
-    const alertElem = document.getElementById("alert");
+
     fetch('/', {
       method: 'POST',
       headers: {
@@ -46,15 +50,26 @@
         body: body,
       })
     })
-		  .then(res => {
-			  if (res.status === 200) {
-			  location.reload();
-			  }
-		  });
- }
+      .then(res => {
+        if (res.status === 200) {
+          location.reload();
+        }
+      });
+  }
 
-  function logout() {
-    document.cookie = "SESSION_ID=; max-age=0";
+  if (deleteForm) {
+    deleteForm.addEventListener('click', function (e) {
+    e.preventDefault();
+
+    fetch('/' + e.target.dataset.set, {
+      method: 'DELETE',
+    })
+      .then(res => {
+        if (res.status === 200) {
+          location.reload();
+        }
+      });
+  });
   }
 </script>
 {{ end }}

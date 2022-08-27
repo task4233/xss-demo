@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS posts (
     user_id     INTEGER(64) NOT NULL,
     title       VARCHAR(64) NOT NULL,
     body        VARCHAR(64) NOT NULL,
+    available   BOOLEAN NOT NULL DEFAULT 1,
     PRIMARY KEY (id),
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
