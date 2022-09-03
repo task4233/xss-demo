@@ -89,12 +89,43 @@ func (p PostController) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// DBからSELECT
+	// qが空なら全件検索、そうでなければタイトルのキーワード検索
+	title := r.URL.Query().Get("title")
 	posts := []Post{}
-	err = p.db.Select(&posts, `SELECT * FROM posts WHERE user_id = ? AND available = 1 ORDER BY id DESC`, userIDStr)
-	if err != nil {
-		logger.Printf("failed Select: %s\n", err.Error())
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
+	if len(title) == 0 {
+		err = p.db.Select(&posts, `SELECT * FROM posts WHERE user_id = ? AND available = 1 ORDER BY id DESC`, userIDStr)
+		if err != nil {
+			logger.Printf("failed Select: %s\n", err.Error())
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		var rows *sqlx.Rows
+		rows, err = p.db.NamedQueryContext(r.Context(), `SELECT * FROM posts WHERE user_id = :user_id AND available = 1 AND title LIKE :title ORDER BY id DESC`, map[string]interface{}{
+			"user_id": userIDStr,
+			"title":   fmt.Sprintf("%%%s%%", title),
+		})
+		if err != nil {
+			logger.Printf("failed NamedQueryContext: %s", err.Error())
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+		defer func() {
+			if err = rows.Close(); err != nil {
+				logger.Printf("failed rows.Close: %s", err.Error())
+			}
+		}()
+
+		var post Post
+		for rows.Next() {
+			err = rows.StructScan(&post)
+			if err != nil {
+				logger.Printf("failed StructScan: %s\n", err.Error())
+				http.Error(w, "internal server error", http.StatusInternalServerError)
+				return
+			}
+			posts = append(posts, post)
+		}
 	}
 
 	// /のHTMLを返す

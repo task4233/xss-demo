@@ -13,7 +13,7 @@ docker/up:
 docker/down:
 	docker compose -f docker-compose.yml down
 
-.PHONY:migrae
+.PHONY:migrate
 migrate:
 	docker exec -it db bash /tmp/init_database.sh
 

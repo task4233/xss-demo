@@ -33,6 +33,9 @@ func (s *Server) Run() error {
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
 	})
+	r.Get("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "favicon.ico")
+	})
 
 	// パスで面倒が起き始めたら/postsや/usersに書き換える
 	r.Mount("/", PostController{db}.Routes())
