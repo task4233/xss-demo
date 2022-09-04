@@ -19,4 +19,4 @@ migrate:
 
 .PHONY:log
 log:
-	docker compose logs -f
+	docker compose logs -f app

@@ -16,13 +16,14 @@
 
 <!-- 検索用のフォーム -->
 <form class="input-group" method="GET">
-  <input type="text" class="form-control" name="title" id="title-input" placeholder="input search title">
+  <input type="text" class="form-control" name="title" value={{ .Title }} placeholder="input search title">
   <input type="submit" class="btn btn-outline-success" value="検索">
 </form>
 
 <!-- 一覧 -->
-<h2>投稿</h2>
-{{ range $post := . }}
+
+<h2>{{ if ne .Title ""  }}{{ .Title }}を含む{{ end }}投稿</h2>
+{{ range $post := .Posts }}
 <div class="card">
   <div class="card-header">
     {{ $post.Title }}
@@ -38,9 +39,6 @@
 <script type="text/javascript">
   const deleteForm = document.querySelector(".delete-form");
   const alertElem = document.getElementById("alert");
-  const params = new URLSearchParams(window.location.search);
-  document.getElementById("title-input").value = params.get("title");
-
 
   // 投稿用
   document.getElementById("submit-form").onsubmit = function (e) {

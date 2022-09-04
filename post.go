@@ -71,6 +71,7 @@ func (p PostController) Create(w http.ResponseWriter, r *http.Request) {
 
 	// DBにinsert
 	_, err = p.db.NamedExecContext(r.Context(), `INSERT INTO posts (user_id, title, body) VALUES (:user_id, :title, :body)`, post)
+	logger.Printf("executed SQL: INSERT INTO posts (user_id, title, body) VALUES (%d, %s, %s)\n", post.UserID, post.Title, post.Body)
 	if err != nil {
 		logger.Printf("failed insertion: %s", err.Error())
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -94,6 +95,7 @@ func (p PostController) List(w http.ResponseWriter, r *http.Request) {
 	posts := []Post{}
 	if len(title) == 0 {
 		err = p.db.Select(&posts, `SELECT * FROM posts WHERE user_id = ? AND available = 1 ORDER BY id DESC`, userIDStr)
+		logger.Printf("executed SQL: `SELECT * FROM posts WHERE user_id = %s AND available = 1 ORDER BY id DESC\n", userIDStr)
 		if err != nil {
 			logger.Printf("failed Select: %s\n", err.Error())
 			http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -105,6 +107,7 @@ func (p PostController) List(w http.ResponseWriter, r *http.Request) {
 			"user_id": userIDStr,
 			"title":   fmt.Sprintf("%%%s%%", title),
 		})
+		logger.Printf("executed SQL: SELECT * FROM posts WHERE user_id = %s AND available = 1 AND title LIKE %%%s%% ORDER BY id \n", userIDStr, title)
 		if err != nil {
 			logger.Printf("failed NamedQueryContext: %s", err.Error())
 			http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -129,7 +132,13 @@ func (p PostController) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// /のHTMLを返す
-	renderedHTML, err := RenderTemplate(listTemplates, posts)
+	renderedHTML, err := RenderTemplate(listTemplates, struct {
+		Title string
+		Posts []Post
+	}{
+		Title: title,
+		Posts: posts,
+	})
 	if err != nil {
 		logger.Printf("failed RenderTemplate: %s\n", err.Error())
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -166,13 +175,15 @@ func (p PostController) Delete(w http.ResponseWriter, r *http.Request) {
 
 	// delete
 	// userIDは他人の投稿を不正にUpdateされないようにするために付与する
+	// どのような投稿をしたか後で見たいので、availableフラグを0にすることで削除された投稿も永続化する
 	_, err = p.db.NamedExecContext(r.Context(), `UPDATE posts SET available=0 WHERE id=:id AND user_id=:user_id`, &Post{
 		ID:     idInt,
 		UserID: userIDInt,
 	})
+	logger.Printf("executed SQL: UPDATE posts SET available=0 WHERE id=%d AND user_id=%d\n", idInt, userIDInt)
 	if err != nil {
+		// 他人のpostを削除された時はエラーハンドリングがめんどくさいので、ログを出して対処したことにする
 		logger.Printf("failed NamedExecContext of Delete: %s\n", err.Error())
-		// 他人のpostを削除された時はエラーハンドリングがめんどくさいので、何もしないでStatusOKにする
 		return
 	}
 }
