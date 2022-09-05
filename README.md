@@ -1,7 +1,7 @@
 ## xss-demo
 xss-demoはSECCON BeginnersでのXSSに関するデモページを構築できます。
 
-![overview](./assets/overview.png)
+![overview](./docs/assets/overview.png)
 
 詳しくは[こちらのドキュメント](./docs/README.md)をご覧ください。
 

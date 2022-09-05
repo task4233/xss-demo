@@ -12,7 +12,7 @@ XSSとは、Cross-site Scriptingの略称です。Cross-site: Webサイトの範
 
 他の例では、バグハンターのKinugawaさんが報告した、Googleの検索バーに刺さるXSSペイロードもあります。こちらはYouTubeで動画が公開されているので、興味のある方は参照してください。
 
-![google-xss](https://www.youtube.com/watch?v=lG7U3fuNw3A)
+- [XSS on Google Search - Sanitizing HTML in The Client?](https://www.youtube.com/watch?v=lG7U3fuNw3A)
 
 ### XSSの3タイプ
 XSSには
